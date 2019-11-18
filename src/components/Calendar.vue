@@ -102,20 +102,29 @@
               :color="selectedEvent.color"
               dark
             >
-              <v-btn icon @click="deleteEvent(selectedEvent)">
+              <v-btn icon @click="deleteEvent(selectedEvent.id)">
                 <v-icon>mdi-delete</v-icon>
               </v-btn>
               <v-toolbar-title v-html="selectedEvent.name"></v-toolbar-title>
               <v-spacer></v-spacer>
-              <v-btn icon>
-                <v-icon>mdi-heart</v-icon>
-              </v-btn>
-              <v-btn icon>
-                <v-icon>mdi-dots-vertical</v-icon>
-              </v-btn>
             </v-toolbar>
+            
             <v-card-text>
-              <span v-html="selectedEvent.details"></span>
+              <v-form v-if="currentlyEditing !== selectedEvent.id">
+                {{ selectedEvent.name }} - {{ selectedEvent.details}}
+              </v-form>
+              <v-form v-else>
+                <v-text-field 
+                  type="text" v-model="selectedEvent.name"
+                  label="Edit name"
+                ></v-text-field>
+                <textarea-autosize
+                  v-model="selectedEvent.details"
+                  type="text"
+                  style="width: 100%"
+                  :min-height="100"
+                ></textarea-autosize>
+              </v-form>
             </v-card-text>
             <v-card-actions>
               <v-btn
@@ -127,6 +136,7 @@
               </v-btn>
               <v-btn text v-if="currentlyEditing !== selectedEvent.id"
               @click.prevent="editEvent(selectedEvent.id)">Edit</v-btn>
+              <v-btn text v-else @click.prevent="updateEvent(selectedEvent)">Save changes</v-btn>
             </v-card-actions>
           </v-card>
         </v-menu>
@@ -203,12 +213,26 @@ import {db} from '../main'
       this.getEvents();
     },
     methods: {
+      async updateEvent(event){
+        try {
+          await db.collection('events').doc(event.id).update({
+            name: event.name,
+            details: event.details
+          })
+
+          this.selectedOpen = false;
+          this.currentlyEditing = null;
+          
+        } catch (error) {
+          console.log(error);
+        }
+      },
       editEvent(id){
         this.currentlyEditing = id;
       },
-      async deleteEvent(event){
+      async deleteEvent(id){
         try {
-          await db.collection('events').doc(event.id).delete();
+          await db.collection('events').doc(id).delete();
           this.selectedOpen = false;
           this.getEvents();
 
