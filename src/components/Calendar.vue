@@ -3,6 +3,9 @@
     <v-col>
       <v-sheet height="64">
         <v-toolbar flat color="white">
+          <v-btn color="primary" class="mr-4" @click="dialog = true">
+            Add
+          </v-btn>
           <v-btn outlined class="mr-4" @click="setToday">
             Today
           </v-btn>
@@ -56,6 +59,32 @@
           @click:date="viewDay"
           @change="updateRange"
         ></v-calendar>
+        <!-- Modal Add Event -->
+        <v-dialog v-model="dialog">
+          <v-card>
+            <v-container>
+              <v-form @submit.prevent="addEvent">
+                <v-text-field 
+                  type="text" label="Add name" v-model="name">
+                </v-text-field>
+                <v-text-field 
+                  type="text" label="Add detail" v-model="details">
+                </v-text-field>
+                <v-text-field 
+                  type="date" label="Start Event" v-model="start">
+                </v-text-field>
+                <v-text-field 
+                  type="date" label="End Event" v-model="end">
+                </v-text-field>
+                <v-text-field 
+                  type="color" label="Color Event" v-model="color">
+                </v-text-field>
+                <v-btn type="submit" color="primary" class="mr-4"
+                @click.stop="dialog = false">Add Event</v-btn>
+              </v-form>
+            </v-container>
+          </v-card>
+        </v-dialog>
         <v-menu
           v-model="selectedOpen"
           :close-on-content-click="false"
@@ -104,6 +133,8 @@
 </template>
 
 <script>
+import {db} from '../main'
+
   export default {
     data: () => ({
       today: new Date().toISOString().substr(0,10),
@@ -122,7 +153,10 @@
       selectedOpen: false,
       events: [],
       name: null,
-      details: null
+      details: null,
+      color: '#1976D2',
+      dialog: false,
+      currentlyEditing: null
     }),
     computed: {
       title () {
@@ -160,9 +194,56 @@
       },
     },
     mounted () {
-      this.$refs.calendar.checkChange()
+      this.$refs.calendar.checkChange();
+    },
+    created(){
+      this.getEvents();
     },
     methods: {
+      async addEvent(){
+        try {
+          if(this.name && this.start && this.end){
+            await db.collection('events').add({
+              name: this.name,
+              details: this.details,
+              start: this.start,
+              end: this.end,
+              color: this.color
+            })
+
+            this.getEvents();
+
+            this.name = null;
+            this.details = null;
+            this.start = null;
+            this.end = null;
+            this.color = '#1976D2';
+
+          }else{
+            console.log('Fields are required');
+          }
+        } catch (error) {
+          console.log(error)
+        }
+      },
+      async getEvents(){
+        try {
+          const snapshot = await db.collection('events').get();
+          const events = [];
+
+          snapshot.forEach(doc => {
+            console.log(doc.data());
+            let eventData = doc.data();
+            eventData.id = doc.id;
+            events.push(eventData);
+          })
+
+          this.events = events;
+
+        } catch (error) {
+          console.log(error);
+        }
+      },
       viewDay ({ date }) {
         this.focus = date
         this.type = 'day'
