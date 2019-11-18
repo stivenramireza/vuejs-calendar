@@ -58,6 +58,7 @@
           @click:more="viewDay"
           @click:date="viewDay"
           @change="updateRange"
+          :short-weekdays="false"
         ></v-calendar>
         <!-- Modal Add Event -->
         <v-dialog v-model="dialog">
@@ -101,8 +102,8 @@
               :color="selectedEvent.color"
               dark
             >
-              <v-btn icon>
-                <v-icon>mdi-pencil</v-icon>
+              <v-btn icon @click="deleteEvent(selectedEvent)">
+                <v-icon>mdi-delete</v-icon>
               </v-btn>
               <v-toolbar-title v-html="selectedEvent.name"></v-toolbar-title>
               <v-spacer></v-spacer>
@@ -124,6 +125,8 @@
               >
                 Cancel
               </v-btn>
+              <v-btn text v-if="currentlyEditing !== selectedEvent.id"
+              @click.prevent="editEvent(selectedEvent.id)">Edit</v-btn>
             </v-card-actions>
           </v-card>
         </v-menu>
@@ -200,6 +203,19 @@ import {db} from '../main'
       this.getEvents();
     },
     methods: {
+      editEvent(id){
+        this.currentlyEditing = id;
+      },
+      async deleteEvent(event){
+        try {
+          await db.collection('events').doc(event.id).delete();
+          this.selectedOpen = false;
+          this.getEvents();
+
+        } catch (error) {
+          console.log(error);
+        }
+      },
       async addEvent(){
         try {
           if(this.name && this.start && this.end){
